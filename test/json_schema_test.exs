@@ -336,6 +336,57 @@ defmodule JSONSchemaTest do
     assert json_schema == expected_json_schema
   end
 
+  test "embeds many" do
+    defmodule Embedded do
+      use Ecto.Schema
+
+      @primary_key false
+      embedded_schema do
+        field(:string, :string)
+      end
+    end
+
+    defmodule Demo do
+      use Ecto.Schema
+
+      @primary_key false
+      embedded_schema do
+        embeds_many(:embedded, Embedded)
+      end
+    end
+
+    json_schema =
+      JSONSchema.from_ecto_schema(Demo)
+      |> Jason.decode!()
+
+    expected_json_schema = %{
+      "$defs" => %{
+        "JSONSchemaTest.Embedded" => %{
+          "description" => "",
+          "properties" => %{
+            "string" => %{
+              "title" => "string",
+              "type" => "string",
+              "description" => "String, e.g. 'hello'"
+            }
+          },
+          "required" => ["string"],
+          "title" => "JSONSchemaTest.Embedded",
+          "type" => "object",
+          "additionalProperties" => false
+        }
+      },
+      "description" => "",
+      "properties" => %{"embedded" => %{"items" => %{"$ref" => "#/$defs/JSONSchemaTest.Embedded"}, "title" => "JSONSchemaTest.Embedded", "type" => "array"}},
+      "required" => ["embedded"],
+      "title" => "JSONSchemaTest.Demo",
+      "type" => "object",
+      "additionalProperties" => false
+    }
+
+    assert json_schema == expected_json_schema
+  end
+
   test "has_one" do
     defmodule Child do
       use Ecto.Schema
